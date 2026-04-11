@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OBS Overlay</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background: transparent;
+  }
+
+  #overlay-container {
+    position: absolute;
+    transition: opacity 0.4s ease;
+  }
+
+  #overlay-container.hidden { opacity: 0; }
+  #overlay-container.visible { opacity: 1; }
+
+  #overlay-media {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+</style>
+</head>
+<body>
+
+<!-- ⚠️ MÊME CONFIG FIREBASE que admin.html — copie-colle les mêmes valeurs -->
+<script>
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyCmNaMBf8Ps-r5IoENr3aAkcFR8XBgAq9g",
+    authDomain: "karmine-corp-asset.firebaseapp.com",
+    databaseURL: "https://karmine-corp-asset-default-rtdb.firebaseio.com",
+    projectId: "karmine-corp-asset",
+    storageBucket: "karmine-corp-asset.firebasestorage.app",
+    messagingSenderId: "588622975676",
+    appId: "1:588622975676:web:04f1e1c66553fb201536b9"
+  };
+</script>
+
+<div id="overlay-container" class="hidden">
+  <!-- Le média sera injecté ici dynamiquement -->
+</div>
+
+<!-- FIREBASE SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+<script>
+// ============================
+// RÉCUPÈRE L'ID DU SLOT DEPUIS L'URL
+// ex: overlay.html?slot=slot_1
+// ============================
+const params = new URLSearchParams(window.location.search);
+const slotId = params.get('slot');
+
+if (!slotId) {
+  console.error('Aucun slot spécifié dans l\'URL. Ajoute ?slot=slot_1 par exemple.');
+}
+
+// ============================
+// INIT FIREBASE
+// ============================
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.database();
+
+let currentAssetId = null;
+let currentSettings = {
+  position: 'bottom-left',
+  size: 25,
+  loop: true,
+  mute: true,
+  chroma: false,
+  bg: '#000000'
+};
+
+// ============================
+// ÉCOUTE LES CHANGEMENTS EN TEMPS RÉEL
+// ============================
+
+// Écoute les settings
+db.ref('settings').on('value', snap => {
+  if (snap.val()) {
+    currentSettings = { ...currentSettings, ...snap.val() };
+    applyBackground();
+    applyPosition();
+  }
+});
+
+// Écoute le slot (quel asset est assigné ?)
+db.ref('slots/' + slotId).on('value', snap => {
+  const slot = snap.val();
+  if (!slot) return;
+
+  const newAssetId = slot.assetId;
+
+  if (newAssetId === currentAssetId) return; // Pas de changement
+  currentAssetId = newAssetId;
+
+  if (!newAssetId) {
+    // Aucun asset — on cache
+    hideOverlay();
+    return;
+  }
+
+  // Charge l'asset
+  db.ref('assets/' + newAssetId).once('value', assetSnap => {
+    const asset = assetSnap.val();
+    if (!asset) { hideOverlay(); return; }
+    showAsset(asset);
+  });
+});
+
+// ============================
+// AFFICHAGE
+// ============================
+function showAsset(asset) {
+  const container = document.getElementById('overlay-container');
+  container.classList.remove('visible');
+  container.classList.add('hidden');
+
+  // Petit délai pour la transition
+  setTimeout(() => {
+    container.innerHTML = '';
+
+    let el;
+
+    if (asset.type === 'video') {
+      el = document.createElement('video');
+      el.src = asset.url;
+      el.id = 'overlay-media';
+      el.loop = currentSettings.loop !== false;
+      el.muted = currentSettings.mute !== false;
+      el.autoplay = true;
+      el.playsInline = true;
+      el.onloadeddata = () => {
+        el.play().catch(() => {});
+      };
+    } else if (asset.type === 'gif' || asset.type === 'image') {
+      el = document.createElement('img');
+      el.src = asset.url;
+      el.id = 'overlay-media';
+    }
+
+    if (el) {
+      container.appendChild(el);
+      applyPosition();
+      applyBackground();
+
+      // Affiche avec transition
+      setTimeout(() => {
+        container.classList.remove('hidden');
+        container.classList.add('visible');
+      }, 50);
+    }
+  }, 300);
+}
+
+function hideOverlay() {
+  const container = document.getElementById('overlay-container');
+  container.classList.remove('visible');
+  container.classList.add('hidden');
+  setTimeout(() => { container.innerHTML = ''; }, 400);
+}
+
+// ============================
+// POSITION & TAILLE
+// ============================
+function applyPosition() {
+  const container = document.getElementById('overlay-container');
+  const size = parseInt(currentSettings.size) || 25;
+  const pct = size / 100;
+
+  // Taille en pixels (base 1920x1080)
+  const w = Math.round(1920 * pct);
+  const h = Math.round(1080 * pct);
+
+  container.style.width = w + 'px';
+  container.style.height = h + 'px';
+
+  // Reset position
+  container.style.top = container.style.bottom = '';
+  container.style.left = container.style.right = '';
+  container.style.transform = '';
+
+  const margin = 20; // px de marge du bord
+
+  if (currentSettings.position === 'full') {
+    container.style.top = '0';
+    container.style.left = '0';
+    container.style.width = '1920px';
+    container.style.height = '1080px';
+    return;
+  }
+
+  switch (currentSettings.position) {
+    case 'bottom-left':
+      container.style.bottom = margin + 'px';
+      container.style.left = margin + 'px';
+      break;
+    case 'bottom-right':
+      container.style.bottom = margin + 'px';
+      container.style.right = margin + 'px';
+      break;
+    case 'top-left':
+      container.style.top = margin + 'px';
+      container.style.left = margin + 'px';
+      break;
+    case 'top-right':
+      container.style.top = margin + 'px';
+      container.style.right = margin + 'px';
+      break;
+    case 'center':
+      container.style.top = '50%';
+      container.style.left = '50%';
+      container.style.transform = 'translate(-50%, -50%)';
+      break;
+  }
+}
+
+function applyBackground() {
+  if (currentSettings.chroma) {
+    document.body.style.background = '#00ff00';
+  } else {
+    document.body.style.background = currentSettings.bg || 'transparent';
+  }
+}
+</script>
+</body>
+</html>
