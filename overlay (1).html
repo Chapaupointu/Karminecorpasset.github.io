@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>OBS Overlay</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { width:1920px; height:1080px; overflow:hidden; background:transparent; }
+  .zone { position:absolute; overflow:hidden; opacity:0; transition:opacity 0.4s ease; }
+  .zone.visible { opacity:1; }
+  .zone video, .zone img { width:100%; height:100%; display:block; }
+</style>
+</head>
+<body>
+
+<script>
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyCmNaMBf8Ps-r5IoENr3aAkcFR8XBgAq9g",
+    authDomain: "karmine-corp-asset.firebaseapp.com",
+    databaseURL: "https://karmine-corp-asset-default-rtdb.firebaseio.com",
+    projectId: "karmine-corp-asset",
+    storageBucket: "karmine-corp-asset.firebasestorage.app",
+    messagingSenderId: "588622975676",
+    appId: "1:588622975676:web:04f1e1c66553fb201536b9"
+  };
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const simpleId = params.get('simple');   // Mode simple : ?simple=ss_1
+const playerId = params.get('player');   // Mode zones  : ?player=p1
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.database();
+
+let assets = {}, zones = {}, assignments = {};
+let renderedZones = {};
+
+db.ref('assets').on('value', s => { assets = s.val()||{}; rebuild(); });
+
+// ====== MODE SIMPLE ======
+if (simpleId) {
+  db.ref('simpleSlots/' + simpleId).on('value', snap => {
+    const slot = snap.val();
+    const assetId = slot?.assetId || null;
+    const asset = assetId ? assets[assetId] : null;
+    renderSimple(asset);
+  });
+}
+
+let simpleEl = null;
+let currentSimpleAssetId = null;
+
+function renderSimple(asset) {
+  // Trouve l'assetId courant
+  const assetId = asset ? Object.keys(assets).find(k => assets[k] === asset) : null;
+  if (assetId === currentSimpleAssetId) return;
+  currentSimpleAssetId = assetId;
+
+  if (simpleEl) {
+    simpleEl.classList.remove('visible');
+    setTimeout(() => { if(simpleEl){simpleEl.remove(); simpleEl=null;} }, 400);
+  }
+
+  if (!asset) return;
+
+  setTimeout(() => {
+    const el = document.createElement('div');
+    el.className = 'zone';
+    el.style.left = '0'; el.style.top = '0';
+    el.style.width = '100%'; el.style.height = '100%';
+
+    let media;
+    if (asset.type === 'video') {
+      media = document.createElement('video');
+      media.src = asset.url;
+      media.loop = true; media.muted = true; media.autoplay = true; media.playsInline = true;
+      media.style.objectFit = 'contain';
+      media.onloadeddata = () => media.play().catch(()=>{});
+    } else {
+      media = document.createElement('img');
+      media.src = asset.url;
+      media.style.objectFit = 'contain';
+    }
+
+    el.appendChild(media);
+    document.body.appendChild(el);
+    simpleEl = el;
+    setTimeout(() => el.classList.add('visible'), 50);
+  }, simpleEl ? 400 : 0);
+}
+
+// ====== MODE ZONES ======
+if (playerId) {
+  db.ref('zones').on('value', s => { zones = s.val()||{}; rebuildZones(); });
+  db.ref('assignments/common').on('value', s => { assignments['common'] = s.val()||{}; rebuildZones(); });
+  db.ref('assignments/' + playerId).on('value', s => { assignments[playerId] = s.val()||{}; rebuildZones(); });
+}
+
+function rebuildZones() {
+  if (!Object.keys(zones).length) return;
+
+  Object.entries(zones).forEach(([zoneId, zone]) => {
+    const assetId = zone.scope === 'common'
+      ? assignments['common']?.[zoneId] || null
+      : assignments[playerId]?.[zoneId] || null;
+
+    if (renderedZones[zoneId] === assetId) return;
+    renderedZones[zoneId] = assetId;
+
+    let el = document.getElementById('z_' + zoneId);
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'z_' + zoneId;
+      el.className = 'zone';
+      document.body.appendChild(el);
+    }
+
+    el.style.left = zone.left + '%';
+    el.style.top = zone.top + '%';
+    el.style.width = zone.width + '%';
+    el.style.height = zone.height + '%';
+
+    const asset = assetId ? assets[assetId] : null;
+
+    if (!asset) {
+      el.classList.remove('visible');
+      setTimeout(() => { el.innerHTML = ''; }, 400);
+      return;
+    }
+
+    el.classList.remove('visible');
+    setTimeout(() => {
+      el.innerHTML = '';
+      let media;
+      if (asset.type === 'video') {
+        media = document.createElement('video');
+        media.src = asset.url;
+        media.loop = true; media.muted = true; media.autoplay = true; media.playsInline = true;
+        media.style.objectFit = zone.fit || 'contain';
+        media.onloadeddata = () => media.play().catch(()=>{});
+      } else {
+        media = document.createElement('img');
+        media.src = asset.url;
+        media.style.objectFit = zone.fit || 'contain';
+      }
+      el.appendChild(media);
+      setTimeout(() => el.classList.add('visible'), 50);
+    }, 300);
+  });
+
+  // Nettoie les zones supprimées
+  Object.keys(renderedZones).forEach(zoneId => {
+    if (!zones[zoneId]) {
+      const el = document.getElementById('z_' + zoneId);
+      if (el) el.remove();
+      delete renderedZones[zoneId];
+    }
+  });
+}
+
+function rebuild() {
+  if (simpleId && currentSimpleAssetId) {
+    const asset = assets[currentSimpleAssetId];
+    if (asset && simpleEl) {
+      const media = simpleEl.querySelector('video,img');
+      if (media && media.src !== asset.url) media.src = asset.url;
+    }
+  }
+  if (playerId) rebuildZones();
+}
+</script>
+</body>
+</html>
