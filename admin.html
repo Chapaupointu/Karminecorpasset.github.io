@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OBS Asset Manager — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0a0f;--surface:#111118;--surface2:#1a1a24;
+    --border:#2a2a3a;--border2:#3a3a50;
+    --accent:#7c6af7;--accent2:#a599ff;
+    --green:#22c55e;--red:#ef4444;--amber:#f59e0b;
+    --text:#e8e8f0;--text2:#9090a8;--text3:#5a5a70;
+    --mono:'IBM Plex Mono',monospace;--sans:'Syne',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;}
+  header{border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;background:var(--bg);z-index:100;}
+  .logo{font-size:15px;font-weight:700;letter-spacing:.05em;display:flex;align-items:center;gap:10px;}
+  .logo-dot{width:8px;height:8px;background:var(--accent);border-radius:50%;box-shadow:0 0 10px var(--accent);animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .status-badge{font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid;}
+  .status-ok{color:var(--green);border-color:#22c55e40;background:#22c55e10;}
+  .status-err{color:var(--red);border-color:#ef444440;background:#ef444410;}
+  .layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 60px);}
+  nav{border-right:1px solid var(--border);padding:1.5rem 0;position:sticky;top:60px;height:calc(100vh - 60px);overflow-y:auto;}
+  .nav-label{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.1em;padding:0 1.5rem;margin-bottom:8px;margin-top:20px;}
+  .nav-label:first-child{margin-top:0;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 1.5rem;cursor:pointer;font-size:14px;color:var(--text2);transition:all .15s;border-left:2px solid transparent;}
+  .nav-item:hover{color:var(--text);background:var(--surface);}
+  .nav-item.active{color:var(--accent2);border-left-color:var(--accent);background:var(--surface);}
+  .nav-icon{font-size:16px;width:20px;text-align:center;}
+  main{padding:2rem;max-width:1000px;}
+  .page{display:none;}.page.active{display:block;}
+  .page-title{font-size:24px;font-weight:700;}
+  .page-sub{font-size:14px;color:var(--text2);margin-top:4px;font-family:var(--mono);margin-bottom:1.5rem;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.25rem;margin-bottom:12px;}
+  .card-header{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+  label{display:block;font-size:12px;font-family:var(--mono);color:var(--text2);margin-bottom:6px;}
+  input[type=text],input[type=url],input[type=number],select{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:13px;padding:9px 12px;outline:none;transition:border-color .15s;}
+  input:focus,select:focus{border-color:var(--accent);}
+  select option{background:var(--surface2);}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;}
+  .btn:hover{background:var(--surface2);}
+  .btn-accent{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn-accent:hover{background:var(--accent2);border-color:var(--accent2);}
+  .btn-danger{color:var(--red);border-color:#ef444430;}
+  .btn-danger:hover{background:#ef444415;}
+  .btn-green{background:var(--green);border-color:var(--green);color:#fff;}
+  .btn-green:hover{opacity:.85;}
+  .btn-amber{background:var(--amber);border-color:var(--amber);color:#000;}
+  .btn-amber:hover{opacity:.85;}
+  .btn-sm{padding:5px 10px;font-size:12px;}
+  .btn-ghost{border-color:transparent;color:var(--text2);}
+  .btn-ghost:hover{color:var(--text);background:var(--surface2);border-color:transparent;}
+  .flex{display:flex;gap:8px;align-items:center;}
+  .flex-between{display:flex;justify-content:space-between;align-items:center;}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+  .form-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;}
+  .fg{margin-bottom:12px;}
+  .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;font-family:var(--mono);font-weight:500;border:1px solid;}
+  .badge-green{color:var(--green);border-color:#22c55e40;background:#22c55e10;}
+  .badge-gray{color:var(--text3);border-color:var(--border);}
+  .badge-accent{color:var(--accent2);border-color:#7c6af740;background:#7c6af710;}
+  .badge-blue{color:#60a5fa;border-color:#60a5fa40;background:#60a5fa10;}
+  .badge-red{color:var(--red);border-color:#ef444440;background:#ef444410;}
+  .asset-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
+  .asset-row:last-child{border-bottom:none;}
+  .asset-thumb{width:96px;height:54px;border-radius:6px;background:var(--surface2);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);}
+  .asset-thumb video,.asset-thumb img{width:100%;height:100%;object-fit:cover;}
+  .asset-info{flex:1;min-width:0;}
+  .asset-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .asset-url{font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
+  .slot-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:10px;}
+  .slot-card.has-asset{border-left:3px solid var(--accent);}
+  .slot-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .slot-name-input{background:transparent;border:none;color:var(--text);font-family:var(--sans);font-size:14px;font-weight:600;outline:none;width:200px;}
+  .slot-asset-select{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:13px;padding:8px 12px;outline:none;}
+  .url-mini{font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:6px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .url-mini span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--accent2);}
+  .preview-wrap{width:100%;aspect-ratio:16/9;background:#000;border-radius:8px;border:1px solid var(--border2);position:relative;overflow:hidden;margin-bottom:12px;cursor:crosshair;}
+  .preview-label{position:absolute;top:8px;left:8px;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.4);pointer-events:none;z-index:2;}
+  .preview-zone{position:absolute;border:2px dashed;border-radius:3px;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:border-color .15s;}
+  .preview-zone:hover{border-style:solid;}
+  .preview-zone-label{position:absolute;top:4px;left:4px;font-family:var(--mono);font-size:10px;background:rgba(0,0,0,.7);padding:2px 5px;border-radius:3px;white-space:nowrap;pointer-events:none;}
+  .preview-zone.selected{border-style:solid;border-width:2px;}
+  .zone-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:10px;cursor:pointer;transition:border-color .15s;}
+  .zone-card:hover{border-color:var(--border2);}
+  .zone-card.selected{border-color:var(--accent);}
+  .zone-card.common{border-left:3px solid #60a5fa;}
+  .zone-card.perplayer{border-left:3px solid var(--accent);}
+  .player-tabs{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;}
+  .player-tab{padding:6px 14px;border-radius:6px;border:1px solid var(--border2);background:transparent;cursor:pointer;font-size:13px;font-family:var(--sans);color:var(--text2);transition:all .15s;}
+  .player-tab:hover{background:var(--surface2);color:var(--text);}
+  .player-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .zone-assign-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .zone-assign-row:last-child{border-bottom:none;}
+  .zone-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .zone-assign-name{font-size:13px;font-weight:600;min-width:130px;}
+  .zone-assign-select{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:12px;padding:6px 10px;outline:none;}
+  .link-row{padding:14px 0;border-bottom:1px solid var(--border);}
+  .link-row:last-child{border-bottom:none;}
+  .url-display{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:12px;color:var(--accent2);word-break:break-all;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
+  .picker-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;}
+  .picker-overlay.open{display:flex;}
+  .picker-modal{background:var(--surface);border:1px solid var(--border2);border-radius:12px;width:520px;max-height:80vh;overflow-y:auto;padding:1.5rem;}
+  .picker-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border);}
+  .picker-item{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:6px;cursor:pointer;transition:background .1s;}
+  .picker-item:hover{background:var(--surface2);}
+  .picker-item.selected{background:#7c6af715;border:1px solid #7c6af740;}
+  .empty-state{text-align:center;padding:2.5rem 1rem;color:var(--text3);font-family:var(--mono);font-size:13px;}
+  .empty-icon{font-size:32px;margin-bottom:12px;}
+  .info-box{background:#7c6af710;border:1px solid #7c6af740;border-radius:8px;padding:1rem 1.25rem;font-family:var(--mono);font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:14px;}
+  .info-box strong{color:var(--accent2);}
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-track{background:var(--bg);}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+  .zone-editor{display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:start;}
+  .zone-controls{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;}
+  .zone-controls-title{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;}
+  .num-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+  .num-group label{font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:4px;}
+  .num-group input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:12px;padding:6px 8px;outline:none;}
+  .num-group input:focus{border-color:var(--accent);}
+
+  /* COUNTDOWN */
+  .countdown-display{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:1.5rem;text-align:center;margin-bottom:1rem;}
+  .countdown-time{font-size:64px;font-weight:700;font-family:var(--mono);color:var(--text);line-height:1;margin-bottom:8px;}
+  .countdown-time.running{color:var(--green);}
+  .countdown-time.paused{color:var(--amber);}
+  .countdown-time.finished{color:var(--red);}
+  .countdown-controls{display:flex;gap:8px;justify-content:center;margin-top:1rem;}
+  .countdown-target{display:flex;gap:6px;justify-content:center;margin-bottom:1rem;flex-wrap:wrap;}
+  .target-btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border2);background:transparent;cursor:pointer;font-size:12px;font-family:var(--sans);color:var(--text2);transition:all .15s;}
+  .target-btn:hover{background:var(--surface2);color:var(--text);}
+  .target-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .preview-zone .resize-handle{position:absolute;width:12px;height:12px;border-radius:2px;background:#fff;border:2px solid;opacity:0;transition:opacity .15s;z-index:10;}
+  .preview-zone:hover .resize-handle,.preview-zone.selected .resize-handle{opacity:1;}
+  .resize-se{bottom:-6px;right:-6px;cursor:se-resize;}
+  .resize-sw{bottom:-6px;left:-6px;cursor:sw-resize;}
+  .resize-ne{top:-6px;right:-6px;cursor:ne-resize;}
+  .resize-nw{top:-6px;left:-6px;cursor:nw-resize;}
+  .preview-zone.selected{border-style:solid !important;border-width:2px !important;}
+  .snap-grid{position:absolute;inset:0;pointer-events:none;opacity:0;}
+  .preview-wrap:hover .snap-grid{opacity:0.15;}
+</style>
+</head>
+<body>
+
+<script>
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyCmNaMBf8Ps-r5IoENr3aAkcFR8XBgAq9g",
+    authDomain: "karmine-corp-asset.firebaseapp.com",
+    databaseURL: "https://karmine-corp-asset-default-rtdb.firebaseio.com",
+    projectId: "karmine-corp-asset",
+    storageBucket: "karmine-corp-asset.firebasestorage.app",
+    messagingSenderId: "588622975676",
+    appId: "1:588622975676:web:04f1e1c66553fb201536b9"
+  };
+  const OVERLAY_BASE_URL = "https://chapaupointu.github.io/Karminecorpasset.github.io/overlay.html";
+</script>
+
+<header>
+  <div class="logo"><div class="logo-dot"></div>OBS ASSET MANAGER</div>
+  <span class="status-badge status-err" id="conn-status">● Connexion...</span>
+</header>
+
+<div class="layout">
+  <nav>
+    <div class="nav-label">Bibliothèque</div>
+    <div class="nav-item active" onclick="showPage('assets',this)"><span class="nav-icon">🎬</span> Assets</div>
+    <div class="nav-label">Mode Simple</div>
+    <div class="nav-item" onclick="showPage('simple',this)"><span class="nav-icon">⚡</span> Slots rapides</div>
+    <div class="nav-label">Mode Zones</div>
+    <div class="nav-item" onclick="showPage('zones',this)"><span class="nav-icon">📐</span> Éditeur zones</div>
+    <div class="nav-item" onclick="showPage('players',this)"><span class="nav-icon">🎮</span> Joueurs</div>
+    <div class="nav-label">Outils Live</div>
+    <div class="nav-item" onclick="showPage('countdown',this)"><span class="nav-icon">⏱️</span> Compte à rebours</div>
+    <div class="nav-label">Diffusion</div>
+    <div class="nav-item" onclick="showPage('links',this)"><span class="nav-icon">🔗</span> Liens OBS</div>
+    <div class="nav-label">Config</div>
+    <div class="nav-item" onclick="showPage('manage',this)"><span class="nav-icon">📋</span> Gérer joueurs</div>
+  </nav>
+
+  <main>
+
+    <!-- ASSETS -->
+    <div id="page-assets" class="page active">
+      <div class="page-title">Bibliothèque d'assets</div>
+      <div class="page-sub">Tes vidéos, GIFs et images disponibles</div>
+      <div class="flex-between" style="margin-bottom:1rem;">
+        <span style="font-size:13px;color:var(--text2);" id="asset-count">0 assets</span>
+        <button class="btn btn-accent" onclick="openAddAsset()">+ Ajouter un asset</button>
+      </div>
+      <div class="card" id="add-asset-card" style="display:none;border-color:#7c6af750;">
+        <div class="card-header">Nouvel asset</div>
+        <div class="fg"><label>Nom</label><input type="text" id="a-name" placeholder="ex: Avatar ZywOo, Logo KC..."/></div>
+        <div class="fg"><label>URL directe</label><input type="url" id="a-url" placeholder="https://... (.mp4 .webm .mov .gif .png .jpg)"/></div>
+        <div class="fg"><label>Type</label>
+          <select id="a-type">
+            <option value="video">Vidéo (mp4, webm, mov)</option>
+            <option value="gif">GIF animé</option>
+            <option value="image">Image (png, jpg)</option>
+          </select>
+        </div>
+        <div class="fg" style="display:flex;align-items:center;justify-content:space-between;">
+          <label style="margin:0;">🔊 Son activé</label>
+          <label class="toggle" style="margin:0;">
+            <input type="checkbox" id="a-sound">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="flex"><button class="btn btn-accent" onclick="saveAsset()">Enregistrer</button><button class="btn btn-ghost" onclick="closeAddAsset()">Annuler</button></div>
+      </div>
+      <div class="card"><div id="asset-list"><div class="empty-state"><div class="empty-icon">🎬</div>Aucun asset</div></div></div>
+    </div>
+
+    <!-- SIMPLE -->
+    <div id="page-simple" class="page">
+      <div class="page-title">Slots rapides</div>
+      <div class="page-sub">Mode simple — une URL par slot, les joueurs gèrent leurs sources OBS</div>
+      <div class="info-box">⚡ Chaque slot = <strong>une URL OBS</strong>. Toi tu changes l'asset, ça se met à jour instantanément.</div>
+      <div class="flex-between" style="margin-bottom:1rem;">
+        <span style="font-size:13px;color:var(--text2);" id="simple-slot-count">0 slots</span>
+        <button class="btn btn-accent" onclick="addSimpleSlot()">+ Ajouter un slot</button>
+      </div>
+      <div id="simple-slot-list"></div>
+    </div>
+
+    <!-- ZONES -->
+    <div id="page-zones" class="page">
+      <div class="page-title">Éditeur de zones</div>
+      <div class="page-sub">Place les zones directement sur l'aperçu 16:9</div>
+      <div class="zone-editor">
+        <div>
+          <div class="preview-wrap" id="preview-canvas"><div class="preview-label">Aperçu 1920×1080 — glisse les zones</div></div>
+          <div class="flex-between" style="margin-bottom:1rem;">
+            <span style="font-size:13px;color:var(--text2);" id="zone-count">0 zones</span>
+            <button class="btn btn-accent btn-sm" onclick="addZone()">+ Nouvelle zone</button>
+          </div>
+          <div id="zone-list"></div>
+        </div>
+        <div class="zone-controls" id="zone-controls" style="display:none;">
+          <div class="zone-controls-title" id="zone-controls-title">Zone sélectionnée</div>
+          <div class="fg"><label>Nom</label><input type="text" id="zc-name" oninput="updateSelectedZone()"/></div>
+          <div class="fg"><label>Type</label>
+            <select id="zc-scope" onchange="updateSelectedZone()">
+              <option value="common">Commune (tous)</option>
+              <option value="perplayer">Par joueur</option>
+            </select>
+          </div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:8px;">Position & taille (%)</div>
+          <div class="num-row">
+            <div class="num-group"><label>Gauche</label><input type="number" id="zc-left" min="0" max="100" step="0.5" oninput="updateSelectedZone()"/></div>
+            <div class="num-group"><label>Haut</label><input type="number" id="zc-top" min="0" max="100" step="0.5" oninput="updateSelectedZone()"/></div>
+          </div>
+          <div class="num-row">
+            <div class="num-group"><label>Largeur</label><input type="number" id="zc-width" min="1" max="100" step="0.5" oninput="updateSelectedZone()"/></div>
+            <div class="num-group"><label>Hauteur</label><input type="number" id="zc-height" min="1" max="100" step="0.5" oninput="updateSelectedZone()"/></div>
+          </div>
+          <div class="fg"><label>Ajustement</label>
+            <select id="zc-fit" onchange="updateSelectedZone()">
+              <option value="contain">Contain</option>
+              <option value="cover">Cover</option>
+              <option value="fill">Fill</option>
+            </select>
+          </div>
+          <div id="zc-common-asset" style="display:none;">
+            <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:8px;">Asset commun</div>
+            <select class="zone-assign-select" id="zc-asset-select" onchange="updateCommonAsset()"><option value="">— Aucun —</option></select>
+          </div>
+          <!-- TEXT OVERLAY -->
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+            <label style="display:flex;align-items:center;gap:8px;font-family:var(--sans);font-size:13px;color:var(--text);cursor:pointer;margin-bottom:10px;">
+              <input type="checkbox" id="zc-text-enabled" style="width:auto;accent-color:var(--accent);" onchange="toggleTextFields();updateSelectedZone()">
+              💬 Texte superposé
+            </label>
+            <div id="zc-text-fields" style="display:none;">
+              <div class="num-group" style="margin-bottom:8px;"><label>Texte</label><input type="text" id="zc-text" placeholder="ex: KILLS : " oninput="updateSelectedZone()"/></div>
+              <div class="num-row">
+                <div class="num-group"><label>Couleur</label><input type="color" id="zc-text-color" value="#ffffff" style="width:100%;height:36px;border-radius:4px;border:1px solid var(--border2);background:var(--surface2);cursor:pointer;padding:2px;" oninput="updateSelectedZone()"/></div>
+                <div class="num-group"><label>Taille (vw)</label><input type="number" id="zc-text-size" value="3" min="1" max="20" oninput="updateSelectedZone()"/></div>
+              </div>
+              <div class="num-group" style="margin-bottom:8px;"><label>Police</label>
+                <select id="zc-text-font" onchange="updateSelectedZone()">
+                  <option value="IBM Plex Mono,monospace">Monospace</option>
+                  <option value="Arial Black,sans-serif">Arial Black</option>
+                  <option value="Impact,sans-serif">Impact</option>
+                  <option value="Syne,sans-serif">Syne</option>
+                </select>
+              </div>
+              <div class="num-row">
+                <div class="num-group"><label>Position H (%)</label><input type="number" id="zc-text-x" value="50" min="0" max="100" oninput="updateSelectedZone()"/></div>
+                <div class="num-group"><label>Position V (%)</label><input type="number" id="zc-text-y" value="90" min="0" max="100" oninput="updateSelectedZone()"/></div>
+              </div>
+              <label style="display:flex;align-items:center;gap:8px;font-family:var(--sans);font-size:12px;color:var(--text2);cursor:pointer;margin-bottom:8px;margin-top:4px;">
+                <input type="checkbox" id="zc-counter-enabled" style="width:auto;accent-color:var(--accent);" onchange="toggleCounterFields();updateSelectedZone()">
+                Compteur optionnel
+              </label>
+              <div id="zc-counter-fields" style="display:none;">
+                <div class="num-row">
+                  <div class="num-group"><label>Valeur départ</label><input type="number" id="zc-counter-start" value="0" oninput="updateSelectedZone()"/></div>
+                  <div class="num-group"><label>Direction</label>
+                    <select id="zc-counter-dir" onchange="updateSelectedZone()">
+                      <option value="up">Monte</option>
+                      <option value="down">Descend</option>
+                    </select>
+                  </div>
+                </div>
+                <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:6px;">Contrôle en live :</div>
+                <div style="display:flex;gap:6px;">
+                  <button class="btn btn-sm btn-accent" style="flex:1;" onclick="adjustCounter(-1)">− Moins</button>
+                  <button class="btn btn-sm" style="flex:1;" onclick="resetCounter()">↺ Reset</button>
+                  <button class="btn btn-sm btn-accent" style="flex:1;" onclick="adjustCounter(1)">+ Plus</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- TIMER -->
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+            <label style="display:flex;align-items:center;gap:8px;font-family:var(--sans);font-size:13px;color:var(--text);cursor:pointer;margin-bottom:10px;">
+              <input type="checkbox" id="zc-timer" style="width:auto;accent-color:var(--accent);" onchange="updateSelectedZone()">
+              Timer automatique
+            </label>
+            <div id="zc-timer-fields" style="display:none;">
+              <div class="num-row">
+                <div class="num-group"><label>Afficher (sec)</label><input type="number" id="zc-show-dur" value="30" min="1" oninput="updateSelectedZone()"/></div>
+                <div class="num-group"><label>Masquer (min)</label><input type="number" id="zc-hide-dur" value="15" min="1" oninput="updateSelectedZone()"/></div>
+              </div>
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="deleteSelectedZone()">Supprimer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PLAYERS -->
+    <div id="page-players" class="page">
+      <div class="page-title">Assets par joueur</div>
+      <div class="page-sub">Assigne un asset dans chaque zone pour chaque joueur</div>
+      <div class="player-tabs" id="player-tabs"></div>
+      <div class="preview-wrap" id="player-preview" style="margin-bottom:1rem;cursor:default;"></div>
+      <div class="card"><div id="player-zone-list"><div class="empty-state"><div class="empty-icon">🎮</div>Crée des zones d'abord</div></div></div>
+    </div>
+
+    <!-- COUNTDOWN -->
+    <div id="page-countdown" class="page">
+      <div class="page-title">Compte à rebours</div>
+      <div class="page-sub">Décompte live sur les overlays OBS — matchs, events...</div>
+
+      <div class="card">
+        <div class="card-header">Durée du compte à rebours</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:1rem;">
+          <div class="fg" style="margin:0;">
+            <label>Jours</label>
+            <input type="number" id="cd-days" value="0" min="0" max="999" style="font-size:20px;padding:10px;text-align:center;"/>
+          </div>
+          <div class="fg" style="margin:0;">
+            <label>Heures</label>
+            <input type="number" id="cd-hours" value="0" min="0" max="23" style="font-size:20px;padding:10px;text-align:center;"/>
+          </div>
+          <div class="fg" style="margin:0;">
+            <label>Minutes</label>
+            <input type="number" id="cd-minutes" value="5" min="0" max="59" style="font-size:20px;padding:10px;text-align:center;"/>
+          </div>
+          <div class="fg" style="margin:0;">
+            <label>Secondes</label>
+            <input type="number" id="cd-seconds" value="0" min="0" max="59" style="font-size:20px;padding:10px;text-align:center;"/>
+          </div>
+        </div>
+        <div>
+          <label style="margin-bottom:8px;">Unités à afficher</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:6px;font-family:var(--sans);font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" id="show-days" checked style="width:auto;accent-color:var(--accent);"> Jours</label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:var(--sans);font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" id="show-hours" checked style="width:auto;accent-color:var(--accent);"> Heures</label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:var(--sans);font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" id="show-minutes" checked style="width:auto;accent-color:var(--accent);"> Minutes</label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:var(--sans);font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" id="show-seconds" checked style="width:auto;accent-color:var(--accent);"> Secondes</label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:var(--sans);font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" id="show-labels" style="width:auto;accent-color:var(--accent);"> Libellés (j/h/m/s)</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Apparence</div>
+        <div class="form-row">
+          <div class="fg" style="margin:0;">
+            <label>Couleur du texte</label>
+            <input type="color" id="cd-color" value="#ffffff" style="width:100%;height:44px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);cursor:pointer;padding:2px;" oninput="updateCdPreview()"/>
+          </div>
+          <div class="fg" style="margin:0;">
+            <label>Taille du texte (vw)</label>
+            <input type="number" id="cd-fontsize" value="8" min="1" max="30" oninput="updateCdPreview()"/>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg" style="margin:0;">
+            <label>Fond</label>
+            <select id="cd-bg" onchange="updateCdPreview()">
+              <option value="transparent">Transparent</option>
+              <option value="rgba(0,0,0,0.5)">Semi-transparent</option>
+              <option value="#000000">Noir</option>
+            </select>
+          </div>
+          <div class="fg" style="margin:0;">
+            <label>Police</label>
+            <select id="cd-font" onchange="updateCdPreview()">
+              <option value="'IBM Plex Mono',monospace">Monospace</option>
+              <option value="'Arial Black',sans-serif">Arial Black</option>
+              <option value="'Syne',sans-serif">Syne</option>
+              <option value="Impact,sans-serif">Impact</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Position sur l'écran — clique pour placer</div>
+        <div class="preview-wrap" id="cd-preview" style="cursor:crosshair;margin-bottom:0;">
+          <div class="preview-label">Clique pour positionner</div>
+          <div id="cd-preview-text" style="position:absolute;font-weight:700;color:#fff;pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;text-shadow:2px 2px 8px rgba(0,0,0,.8);">02j 04h 30m 00s</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+          <div class="fg" style="margin:0;"><label>Gauche (%)</label><input type="number" id="cd-left" value="50" min="0" max="100" step="0.5" oninput="updateCdPreview()"/></div>
+          <div class="fg" style="margin:0;"><label>Haut (%)</label><input type="number" id="cd-top" value="5" min="0" max="100" step="0.5" oninput="updateCdPreview()"/></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Cible d'affichage</div>
+        <div class="countdown-target">
+          <div class="target-btn active" id="target-all" onclick="setCdTarget('all')">Tous les joueurs</div>
+          <div id="cd-player-targets" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        </div>
+      </div>
+
+      <div class="countdown-display">
+        <div class="countdown-time" id="cd-display">00j 05m 00s</div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--text3);" id="cd-status-text">Prêt</div>
+        <div class="countdown-controls">
+          <button class="btn btn-green" onclick="startCountdown()">▶ Lancer</button>
+          <button class="btn btn-amber" onclick="pauseCountdown()">⏸ Pause</button>
+          <button class="btn btn-danger" onclick="stopCountdown()">⏹ Arrêter</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LINKS -->
+    <div id="page-links" class="page">
+      <div class="page-title">Liens OBS</div>
+      <div class="page-sub">Distribue ces liens à tes joueurs</div>
+      <div class="card">
+        <div class="card-header">🎯 Config OBS (une seule fois par joueur)</div>
+        <ol style="padding-left:1.2rem;font-size:13px;color:var(--text2);font-family:var(--mono);line-height:2.2;">
+          <li>OBS → Sources → <strong style="color:var(--text);">+ → Navigateur</strong></li>
+          <li>Coller l'URL — Largeur : <strong style="color:var(--accent2);">1920</strong> Hauteur : <strong style="color:var(--accent2);">1080</strong></li>
+          <li>Cocher <strong style="color:var(--text);">"Actualiser quand la scène devient active"</strong></li>
+        </ol>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:1rem;">
+        <button class="btn btn-sm" onclick="setLinksMode('simple')" id="links-tab-simple" style="background:var(--accent);border-color:var(--accent);color:#fff;">⚡ Slots simples</button>
+        <button class="btn btn-sm" onclick="setLinksMode('zones')" id="links-tab-zones">📐 Zones</button>
+      </div>
+      <div class="card"><div id="links-list"></div></div>
+    </div>
+
+    <!-- MANAGE -->
+    <div id="page-manage" class="page">
+      <div class="page-title">Gérer les joueurs</div>
+      <div class="page-sub">Joueurs utilisés dans le mode Zones</div>
+      <div class="flex-between" style="margin-bottom:1rem;">
+        <span></span>
+        <button class="btn btn-accent" onclick="addPlayer()">+ Ajouter un joueur</button>
+      </div>
+      <div class="card"><div id="player-manage-list"></div></div>
+    </div>
+
+  </main>
+</div>
+
+<div class="picker-overlay" id="picker-overlay" onclick="if(event.target===this)closePicker()">
+  <div class="picker-modal">
+    <div class="picker-header">
+      <div>
+        <div style="font-size:16px;font-weight:700;" id="picker-title">Choisir un asset</div>
+        <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px;" id="picker-subtitle"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="closePicker()">✕</button>
+    </div>
+    <div id="picker-list"></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script>
+let db,assets={},simpleSlots={},players={},zones={},assignments={};
+const ZONE_COLORS=['#7c6af7','#22c55e','#f59e0b','#ef4444','#60a5fa','#f472b6','#34d399','#fb923c'];
+let selectedZoneId=null,linksMode='simple',activePlayerId=null;
+let cdInterval=null,cdTarget='all';
+
+try{
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db=firebase.database();
+  document.getElementById('conn-status').textContent='● Connecté';
+  document.getElementById('conn-status').className='status-badge status-ok';
+  initListeners();
+}catch(e){document.getElementById('conn-status').textContent='● Erreur Firebase';console.error(e);}
+
+function initListeners(){
+  db.ref('assets').on('value',s=>{assets=s.val()||{};renderAssets();renderSimpleSlots();renderZoneList();renderPlayerZones();populateZoneAssetSelect();});
+  db.ref('simpleSlots').on('value',s=>{
+    if(!s.val()){const def={};for(let i=1;i<=5;i++)def['ss_'+i]={label:'Slot '+i,assetId:null};db.ref('simpleSlots').set(def);}
+    else{simpleSlots=s.val();renderSimpleSlots();renderLinks();}
+  });
+  db.ref('players').on('value',s=>{
+    if(!s.val()){const def={};['Joueur 1','Joueur 2','Joueur 3','Joueur 4','Joueur 5'].forEach((n,i)=>{def['p'+(i+1)]={label:n};});db.ref('players').set(def);}
+    else{players=s.val();renderPlayerTabs();renderPlayerManage();renderLinks();renderCdTargets();}
+  });
+  db.ref('zones').on('value',s=>{zones=s.val()||{};renderPreviewCanvas();renderZoneList();renderPlayerZones();renderLinks();populateZoneAssetSelect();});
+  db.ref('assignments').on('value',s=>{assignments=s.val()||{};renderPlayerZones();renderPreviewCanvas();renderPlayerPreview();});
+}
+
+function showPage(name,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  el.classList.add('active');
+  if(name==='countdown')updateCdPreview();
+}
+
+// ASSETS
+function openAddAsset(){document.getElementById('add-asset-card').style.display='block';document.getElementById('a-name').focus();}
+function closeAddAsset(){document.getElementById('add-asset-card').style.display='none';document.getElementById('a-name').value='';document.getElementById('a-url').value='';}
+function saveAsset(){
+  const name=document.getElementById('a-name').value.trim();
+  const url=document.getElementById('a-url').value.trim();
+  const type=document.getElementById('a-type').value;
+  const sound=document.getElementById('a-sound').checked;
+  if(!name||!url){alert('Remplis le nom et l\'URL !');return;}
+  db.ref('assets/asset_'+Date.now()).set({name,url,type,sound});
+  closeAddAsset();
+}
+function deleteAsset(id){if(!confirm('Supprimer ?'))return;db.ref('assets/'+id).remove();}
+
+function editAssetUrl(id){
+  const currentUrl = assets[id]?.url || '';
+  const newUrl = prompt('Nouvelle URL pour cet asset :', currentUrl);
+  if(newUrl && newUrl.trim() && newUrl !== currentUrl){
+    db.ref('assets/'+id+'/url').set(newUrl.trim());
+  }
+}
+function renderAssets(){
+  const el=document.getElementById('asset-list');
+  const list=Object.entries(assets);
+  document.getElementById('asset-count').textContent=list.length+' asset'+(list.length>1?'s':'');
+  if(!list.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🎬</div>Aucun asset</div>';return;}
+  el.innerHTML='';
+  list.forEach(function([id,a]){
+    const div=document.createElement('div');
+    div.className='asset-row';
+    const thumb=a.type==='video'?'<video src="'+a.url+'" muted preload="metadata" style="width:100%;height:100%;object-fit:cover;"></video>':'<img src="'+a.url+'" onerror="this.style.display=\'none\'" style="width:100%;height:100%;object-fit:cover;"/>';
+    const soundBadge=a.sound?'<span class="badge badge-green">🔊 Son</span>':'<span class="badge badge-gray">🔇 Muet</span>';
+    div.innerHTML='<div class="asset-thumb">'+thumb+'</div>'+
+      '<div class="asset-info"><div class="asset-name">'+a.name+'</div><div class="asset-url">'+a.url+'</div>'+
+      '<div style="margin-top:4px;display:flex;gap:6px;align-items:center;"><span class="badge badge-gray">'+a.type+'</span>'+soundBadge+'</div></div>'+
+      '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">'+
+      '<button class="btn btn-sm">✏️ URL</button>'+
+      '<button class="btn btn-sm" title="Son on/off">'+(a.sound?'🔊':'🔇')+'</button>'+
+      '<button class="btn btn-sm btn-danger">Suppr.</button></div>';
+    const btns=div.querySelectorAll('button');
+    btns[0].onclick=function(){editAssetUrl(id);};
+    btns[1].onclick=function(){db.ref('assets/'+id+'/sound').set(!a.sound);};
+    btns[2].onclick=function(){deleteAsset(id);};
+    el.appendChild(div);
+  });
+}
+
+// SIMPLE SLOTS
+function addSimpleSlot(){const id='ss_'+Date.now();db.ref('simpleSlots/'+id).set({label:'Slot '+(Object.keys(simpleSlots).length+1),assetId:null});}
+function deleteSimpleSlot(id){if(!confirm('Supprimer ?'))return;db.ref('simpleSlots/'+id).remove();}
+function renderSimpleSlots(){
+  const el=document.getElementById('simple-slot-list');
+  const list=Object.entries(simpleSlots);
+  document.getElementById('simple-slot-count').textContent=list.length+' slot'+(list.length>1?'s':'');
+  if(!list.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">⚡</div>Aucun slot</div>';return;}
+  el.innerHTML=list.map(([id,s])=>{
+    const asset=s.assetId?assets[s.assetId]:null;
+    const url=`${OVERLAY_BASE_URL}?simple=${id}`;
+    const timerOn=!!s.timerEnabled;
+    const showDur=s.showDuration||30;
+    const hideDur=s.hideDuration||15;
+    return `<div class="slot-card ${asset?'has-asset':''}">
+      <div class="slot-header">
+        <input class="slot-name-input" value="${s.label}" onchange="db.ref('simpleSlots/${id}/label').set(this.value)"/>
+        <div class="flex"><span class="badge ${asset?'badge-green':'badge-gray'}">${asset?'● Actif':'○ Vide'}</span><button class="btn btn-sm btn-danger" onclick="deleteSimpleSlot('${id}')">✕</button></div>
+      </div>
+      <select class="slot-asset-select" onchange="db.ref('simpleSlots/${id}/assetId').set(this.value||null)">
+        <option value="">— Aucun asset —</option>
+        ${Object.entries(assets).map(([aid,a])=>`<option value="${aid}" ${s.assetId===aid?'selected':''}>${a.name}</option>`).join('')}
+      </select>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${timerOn?'10px':'0'};">
+          <label style="display:flex;align-items:center;gap:8px;font-family:var(--sans);font-size:13px;color:var(--text);cursor:pointer;margin:0;">
+            <input type="checkbox" ${timerOn?'checked':''} style="width:auto;accent-color:var(--accent);"
+              onchange="db.ref('simpleSlots/${id}/timerEnabled').set(this.checked).then(()=>db.ref('simpleSlots').once('value',s=>{simpleSlots=s.val()||{};renderSimpleSlots();}))">
+            ⏱️ Timer automatique
+          </label>
+          ${timerOn?'<span class="badge badge-green">Actif</span>':''}
+        </div>
+        ${timerOn?`
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">
+          <div><label>Afficher pendant (sec)</label>
+            <input type="number" value="${showDur}" min="1" style="padding:6px 8px;font-size:13px;"
+              onchange="db.ref('simpleSlots/${id}/showDuration').set(parseInt(this.value)||30)"/></div>
+          <div><label>Masquer pendant (min)</label>
+            <input type="number" value="${hideDur}" min="1" style="padding:6px 8px;font-size:13px;"
+              onchange="db.ref('simpleSlots/${id}/hideDuration').set(parseInt(this.value)||15)"/></div>
+        </div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text3);">→ Visible ${showDur}s puis masqué ${hideDur}min · boucle infinie</div>`:''}
+      </div>
+      <div class="url-mini"><span>${url}</span><button class="btn btn-sm" onclick="copyUrl('${url}',this)">Copier</button></div>
+    </div>`;
+  }).join('');
+}
+
+// ZONES
+function addZone(){
+  const n=Object.keys(zones).length;
+  const color=ZONE_COLORS[n%ZONE_COLORS.length];
+  const id='zone_'+Date.now();
+  db.ref('zones/'+id).set({name:'Zone '+(n+1),scope:'perplayer',left:10,top:10,width:25,height:25,fit:'contain',color});
+  setTimeout(()=>selectZone(id),300);
+}
+function deleteSelectedZone(){if(!selectedZoneId||!confirm('Supprimer ?'))return;db.ref('zones/'+selectedZoneId).remove();selectedZoneId=null;document.getElementById('zone-controls').style.display='none';}
+function adjustCounter(delta){
+  if(!selectedZoneId) return;
+  const counterKey='counters/'+selectedZoneId+(activePlayerId?'_'+activePlayerId:'');
+  db.ref(counterKey).once('value',function(snap){
+    const current=snap.val()!==null?snap.val():(zones[selectedZoneId]?.counterStart||0);
+    db.ref(counterKey).set(current+delta);
+  });
+}
+function resetCounter(){
+  if(!selectedZoneId) return;
+  const counterKey='counters/'+selectedZoneId+(activePlayerId?'_'+activePlayerId:'');
+  db.ref(counterKey).set(zones[selectedZoneId]?.counterStart||0);
+}
+function toggleTextFields(){
+  const on=document.getElementById('zc-text-enabled').checked;
+  document.getElementById('zc-text-fields').style.display=on?'block':'none';
+}
+function toggleCounterFields(){
+  const on=document.getElementById('zc-counter-enabled').checked;
+  document.getElementById('zc-counter-fields').style.display=on?'block':'none';
+}
+
+function selectZone(id){
+  selectedZoneId=id;const z=zones[id];if(!z)return;
+  document.getElementById('zone-controls').style.display='block';
+  document.getElementById('zone-controls-title').textContent='Zone : '+z.name;
+  document.getElementById('zc-name').value=z.name;
+  document.getElementById('zc-scope').value=z.scope;
+  document.getElementById('zc-left').value=z.left;
+  document.getElementById('zc-top').value=z.top;
+  document.getElementById('zc-width').value=z.width;
+  document.getElementById('zc-height').value=z.height;
+  document.getElementById('zc-fit').value=z.fit||'contain';
+  document.getElementById('zc-common-asset').style.display=z.scope==='common'?'block':'none';
+  document.getElementById('zc-timer').checked=!!z.timerEnabled;
+  document.getElementById('zc-show-dur').value=z.showDuration||30;
+  document.getElementById('zc-hide-dur').value=z.hideDuration||15;
+  document.getElementById('zc-timer-fields').style.display=z.timerEnabled?'block':'none';
+  // Text overlay
+  document.getElementById('zc-text-enabled').checked=!!z.textEnabled;
+  document.getElementById('zc-text-fields').style.display=z.textEnabled?'block':'none';
+  document.getElementById('zc-text').value=z.text||'';
+  document.getElementById('zc-text-color').value=z.textColor||'#ffffff';
+  document.getElementById('zc-text-size').value=z.textSize||3;
+  document.getElementById('zc-text-font').value=z.textFont||'IBM Plex Mono,monospace';
+  document.getElementById('zc-text-x').value=z.textX||50;
+  document.getElementById('zc-text-y').value=z.textY||90;
+  document.getElementById('zc-counter-enabled').checked=!!z.counterEnabled;
+  document.getElementById('zc-counter-fields').style.display=z.counterEnabled?'block':'none';
+  document.getElementById('zc-counter-start').value=z.counterStart||0;
+  document.getElementById('zc-counter-dir').value=z.counterDir||'up';
+  populateZoneAssetSelect();renderPreviewCanvas();renderZoneList();
+}
+let updateTimer=null;
+function updateSelectedZone(){
+  if(!selectedZoneId)return;
+  clearTimeout(updateTimer);
+  updateTimer=setTimeout(()=>{
+    const timerOn=document.getElementById('zc-timer').checked;
+    document.getElementById('zc-timer-fields').style.display=timerOn?'block':'none';
+    const textOn=document.getElementById('zc-text-enabled').checked;
+    const counterOn=document.getElementById('zc-counter-enabled').checked;
+    const data={name:document.getElementById('zc-name').value||'Zone',scope:document.getElementById('zc-scope').value,left:parseFloat(document.getElementById('zc-left').value)||0,top:parseFloat(document.getElementById('zc-top').value)||0,width:parseFloat(document.getElementById('zc-width').value)||10,height:parseFloat(document.getElementById('zc-height').value)||10,fit:document.getElementById('zc-fit').value||'contain',color:zones[selectedZoneId]?.color||'#7c6af7',timerEnabled:timerOn,showDuration:parseInt(document.getElementById('zc-show-dur').value)||30,hideDuration:parseInt(document.getElementById('zc-hide-dur').value)||15,textEnabled:textOn,text:document.getElementById('zc-text').value||'',textColor:document.getElementById('zc-text-color').value||'#ffffff',textSize:parseInt(document.getElementById('zc-text-size').value)||3,textFont:document.getElementById('zc-text-font').value||'IBM Plex Mono,monospace',textX:parseFloat(document.getElementById('zc-text-x').value)||50,textY:parseFloat(document.getElementById('zc-text-y').value)||90,counterEnabled:counterOn,counterStart:parseInt(document.getElementById('zc-counter-start').value)||0,counterDir:document.getElementById('zc-counter-dir').value||'up'};
+    document.getElementById('zc-common-asset').style.display=data.scope==='common'?'block':'none';
+    db.ref('zones/'+selectedZoneId).update(data);
+  },300);
+}
+function populateZoneAssetSelect(){
+  const sel=document.getElementById('zc-asset-select');if(!sel)return;
+  const current=selectedZoneId?assignments['common']?.[selectedZoneId]:null;
+  sel.innerHTML='<option value="">— Aucun —</option>'+Object.entries(assets).map(([id,a])=>`<option value="${id}" ${current===id?'selected':''}>${a.name}</option>`).join('');
+}
+function updateCommonAsset(){if(!selectedZoneId)return;db.ref('assignments/common/'+selectedZoneId).set(document.getElementById('zc-asset-select').value||null);}
+function renderPreviewCanvas(){
+  const canvas=document.getElementById('preview-canvas');if(!canvas)return;
+  canvas.querySelectorAll('.preview-zone,.snap-grid').forEach(el=>el.remove());
+  // Draw snap grid
+  const grid=document.createElement('div');grid.className='snap-grid';
+  grid.style.cssText='background:repeating-linear-gradient(0deg,transparent,transparent calc(100%/6 - 1px),rgba(255,255,255,.3) calc(100%/6 - 1px),rgba(255,255,255,.3) calc(100%/6)),repeating-linear-gradient(90deg,transparent,transparent calc(100%/6 - 1px),rgba(255,255,255,.3) calc(100%/6 - 1px),rgba(255,255,255,.3) calc(100%/6));';
+  canvas.appendChild(grid);
+  Object.entries(zones).forEach(([id,z])=>{
+    let el=document.createElement('div');
+    el.className='preview-zone'+(id===selectedZoneId?' selected':'');
+    el.style.cssText='left:'+z.left+'%;top:'+z.top+'%;width:'+z.width+'%;height:'+z.height+'%;border-color:'+z.color+';background:'+z.color+'22;';
+    el.onclick=function(e){if(!e.target.classList.contains('resize-handle'))selectZone(id);};
+    // Label
+    const lbl=document.createElement('div');lbl.className='preview-zone-label';lbl.style.color=z.color;lbl.textContent=z.name+(z.scope==='common'?' (C)':' (J)');
+    el.appendChild(lbl);
+    // Resize handles
+    ['nw','ne','sw','se'].forEach(function(pos){
+      const h=document.createElement('div');
+      h.className='resize-handle resize-'+pos;
+      h.style.borderColor=z.color;
+      h.addEventListener('mousedown',function(e){e.stopPropagation();makeResizable(el,id,canvas,pos,e);});
+      el.appendChild(h);
+    });
+    makeDraggable(el,id,canvas);
+    canvas.appendChild(el);
+  });
+}
+
+function snapVal(v){return Math.round(v*6)/6;}
+
+function makeDraggable(el,zoneId,canvas){
+  let startX,startY,startLeft,startTop,isDragging=false;
+  el.addEventListener('mousedown',function(e){
+    if(e.target.classList.contains('resize-handle'))return;
+    e.preventDefault();isDragging=true;selectZone(zoneId);
+    const rect=canvas.getBoundingClientRect();const z=zones[zoneId];
+    startX=e.clientX;startY=e.clientY;startLeft=z.left;startTop=z.top;
+    function onMove(e){
+      if(!isDragging)return;
+      const dx=(e.clientX-startX)/rect.width*100;
+      const dy=(e.clientY-startY)/rect.height*100;
+      const nl=Math.max(0,Math.min(100-(zones[zoneId]?.width||10),startLeft+dx));
+      const nt=Math.max(0,Math.min(100-(zones[zoneId]?.height||10),startTop+dy));
+      el.style.left=nl+'%';el.style.top=nt+'%';
+      document.getElementById('zc-left').value=nl.toFixed(1);
+      document.getElementById('zc-top').value=nt.toFixed(1);
+    }
+    function onUp(e){
+      if(!isDragging)return;isDragging=false;
+      const rect=canvas.getBoundingClientRect();
+      const dx=(e.clientX-startX)/rect.width*100;const dy=(e.clientY-startY)/rect.height*100;
+      const nl=Math.max(0,Math.min(100-(zones[zoneId]?.width||10),startLeft+dx));
+      const nt=Math.max(0,Math.min(100-(zones[zoneId]?.height||10),startTop+dy));
+      db.ref('zones/'+zoneId).update({left:parseFloat(nl.toFixed(1)),top:parseFloat(nt.toFixed(1))});
+      document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);
+    }
+    document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
+  });
+}
+
+function makeResizable(el,zoneId,canvas,corner,startEvt){
+  startEvt.preventDefault();
+  const rect=canvas.getBoundingClientRect();
+  const z=zones[zoneId];
+  const startX=startEvt.clientX,startY=startEvt.clientY;
+  const origLeft=z.left,origTop=z.top,origW=z.width,origH=z.height;
+  function onMove(e){
+    const dx=(e.clientX-startX)/rect.width*100;
+    const dy=(e.clientY-startY)/rect.height*100;
+    let nl=origLeft,nt=origTop,nw=origW,nh=origH;
+    if(corner==='se'){nw=Math.max(5,origW+dx);nh=Math.max(5,origH+dy);}
+    else if(corner==='sw'){nw=Math.max(5,origW-dx);nl=Math.min(origLeft+origW-5,origLeft+dx);nh=Math.max(5,origH+dy);}
+    else if(corner==='ne'){nw=Math.max(5,origW+dx);nh=Math.max(5,origH-dy);nt=Math.min(origTop+origH-5,origTop+dy);}
+    else if(corner==='nw'){nw=Math.max(5,origW-dx);nl=Math.min(origLeft+origW-5,origLeft+dx);nh=Math.max(5,origH-dy);nt=Math.min(origTop+origH-5,origTop+dy);}
+    el.style.left=nl+'%';el.style.top=nt+'%';el.style.width=nw+'%';el.style.height=nh+'%';
+    document.getElementById('zc-left').value=nl.toFixed(1);document.getElementById('zc-top').value=nt.toFixed(1);
+    document.getElementById('zc-width').value=nw.toFixed(1);document.getElementById('zc-height').value=nh.toFixed(1);
+  }
+  function onUp(e){
+    const dx=(e.clientX-startX)/rect.width*100;const dy=(e.clientY-startY)/rect.height*100;
+    let nl=origLeft,nt=origTop,nw=origW,nh=origH;
+    if(corner==='se'){nw=Math.max(5,origW+dx);nh=Math.max(5,origH+dy);}
+    else if(corner==='sw'){nw=Math.max(5,origW-dx);nl=Math.min(origLeft+origW-5,origLeft+dx);nh=Math.max(5,origH+dy);}
+    else if(corner==='ne'){nw=Math.max(5,origW+dx);nh=Math.max(5,origH-dy);nt=Math.min(origTop+origH-5,origTop+dy);}
+    else if(corner==='nw'){nw=Math.max(5,origW-dx);nl=Math.min(origLeft+origW-5,origLeft+dx);nh=Math.max(5,origH-dy);nt=Math.min(origTop+origH-5,origTop+dy);}
+    db.ref('zones/'+zoneId).update({left:parseFloat(nl.toFixed(1)),top:parseFloat(nt.toFixed(1)),width:parseFloat(nw.toFixed(1)),height:parseFloat(nh.toFixed(1))});
+    document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);
+  }
+  document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
+}
+function renderZoneList(){
+  const el=document.getElementById('zone-list');if(!el)return;
+  const list=Object.entries(zones);
+  document.getElementById('zone-count').textContent=list.length+' zone'+(list.length>1?'s':'');
+  if(!list.length){el.innerHTML='';return;}
+  el.innerHTML=list.map(([id,z])=>`
+    <div class="zone-card ${z.scope} ${id===selectedZoneId?'selected':''}" onclick="selectZone('${id}')">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:12px;height:12px;border-radius:50%;background:${z.color};flex-shrink:0;"></div>
+        <span style="font-size:13px;font-weight:600;">${z.name}</span>
+        <span class="badge ${z.scope==='common'?'badge-blue':'badge-accent'}">${z.scope==='common'?'Commune':'Par joueur'}</span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--text3);">${z.left}% ${z.top}% · ${z.width}%×${z.height}%</span>
+      </div>
+    </div>`).join('');
+}
+
+// PLAYERS
+function renderPlayerTabs(){
+  const el=document.getElementById('player-tabs');const list=Object.entries(players);
+  if(!list.length){el.innerHTML='';return;}
+  if(!activePlayerId||!players[activePlayerId])activePlayerId=list[0][0];
+  el.innerHTML=list.map(([id,p])=>`<div class="player-tab ${activePlayerId===id?'active':''}" onclick="selectPlayer('${id}')">${p.label}</div>`).join('');
+  renderPlayerZones();renderPlayerPreview();
+}
+function selectPlayer(id){activePlayerId=id;renderPlayerTabs();}
+function renderPlayerZones(){
+  const el=document.getElementById('player-zone-list');if(!el)return;
+  const perZones=Object.entries(zones).filter(([,z])=>z.scope==='perplayer');
+  const comZones=Object.entries(zones).filter(([,z])=>z.scope==='common');
+  if(!activePlayerId){el.innerHTML='<div class="empty-state">Sélectionne un joueur</div>';return;}
+  let html='';
+  if(comZones.length){html+=`<div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);">Zones communes</div>`;html+=comZones.map(([id,z])=>{const a=assignments['common']?.[id]?assets[assignments['common'][id]]:null;return`<div class="zone-assign-row" style="opacity:.5;"><div class="zone-dot" style="background:${z.color};"></div><div class="zone-assign-name">${z.name}</div><div style="font-size:12px;color:var(--text3);font-family:var(--mono);">${a?a.name:'Aucun'} (commun)</div></div>`;}).join('');if(perZones.length)html+='<div style="margin:12px 0;border-bottom:1px solid var(--border);"></div>';}
+  if(!perZones.length){html+='<div class="empty-state" style="padding:1.5rem;"><div class="empty-icon">📐</div>Crée des zones "Par joueur"</div>';}
+  else{html+=`<div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:8px;">Assets de : <strong style="color:var(--text);">${players[activePlayerId]?.label}</strong></div>`;html+=perZones.map(([id,z])=>`<div class="zone-assign-row"><div class="zone-dot" style="background:${z.color};"></div><div class="zone-assign-name">${z.name}</div><div style="flex:1;"><select class="zone-assign-select" onchange="assignPlayerZone('${id}',this.value)"><option value="">— Aucun —</option>${Object.entries(assets).map(([aid,a])=>`<option value="${aid}" ${assignments[activePlayerId]?.[id]===aid?'selected':''}>${a.name}</option>`).join('')}</select></div></div>`).join('');}
+  el.innerHTML=html;renderPlayerPreview();
+}
+function assignPlayerZone(zoneId,assetId){if(!activePlayerId)return;db.ref('assignments/'+activePlayerId+'/'+zoneId).set(assetId||null);}
+function renderPlayerPreview(){
+  const canvas=document.getElementById('player-preview');if(!canvas||!activePlayerId)return;
+  canvas.querySelectorAll('.preview-zone').forEach(el=>el.remove());
+  Object.entries(zones).forEach(([id,z])=>{
+    const assetId=z.scope==='common'?assignments['common']?.[id]:assignments[activePlayerId]?.[id];
+    const asset=assetId?assets[assetId]:null;
+    let el=document.createElement('div');el.className='preview-zone';
+    el.style.cssText=`left:${z.left}%;top:${z.top}%;width:${z.width}%;height:${z.height}%;border-color:${z.color};background:${asset?'transparent':z.color+'22'};`;
+    if(asset){let media;if(asset.type==='video'){media=document.createElement('video');media.src=asset.url;media.muted=true;media.autoplay=true;media.loop=true;media.style.objectFit=z.fit||'contain';}else{media=document.createElement('img');media.src=asset.url;media.style.objectFit=z.fit||'contain';}el.appendChild(media);}
+    const lbl=document.createElement('div');lbl.className='preview-zone-label';lbl.style.color=z.color;lbl.textContent=z.name+(asset?' ✓':' —');el.appendChild(lbl);
+    canvas.appendChild(el);
+  });
+}
+
+// ====== COUNTDOWN ======
+function renderCdTargets(){
+  const el=document.getElementById('cd-player-targets');if(!el)return;
+  el.innerHTML=Object.entries(players).map(([id,p])=>`<div class="target-btn" id="target-${id}" onclick="setCdTarget('${id}')">${p.label}</div>`).join('');
+}
+
+function setCdTarget(target){
+  cdTarget=target;
+  document.querySelectorAll('.target-btn').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('target-'+target)||document.getElementById('target-all');
+  if(btn)btn.classList.add('active');
+}
+
+function getShowOptions(){
+  return {
+    days:document.getElementById('show-days')?.checked,
+    hours:document.getElementById('show-hours')?.checked,
+    minutes:document.getElementById('show-minutes')?.checked,
+    seconds:document.getElementById('show-seconds')?.checked,
+    labels:document.getElementById('show-labels')?.checked
+  };
+}
+
+function formatCountdown(totalSeconds, opts){
+  const d=Math.floor(totalSeconds/86400);
+  const h=Math.floor((totalSeconds%86400)/3600);
+  const m=Math.floor((totalSeconds%3600)/60);
+  const s=totalSeconds%60;
+  let parts=[];
+  if(opts.days)    parts.push(String(d).padStart(2,'0')+(opts.labels?'j':''));
+  if(opts.hours)   parts.push(String(h).padStart(2,'0')+(opts.labels?'h':''));
+  if(opts.minutes) parts.push(String(m).padStart(2,'0')+(opts.labels?'m':''));
+  if(opts.seconds) parts.push(String(s).padStart(2,'0')+(opts.labels?'s':''));
+  if(!parts.length) parts.push('00');
+  return opts.labels ? parts.join(' ') : parts.join(':');
+}
+
+function updateCdPreview(){
+  const el=document.getElementById('cd-preview-text');if(!el)return;
+  const left=document.getElementById('cd-left')?.value||50;
+  const top=document.getElementById('cd-top')?.value||5;
+  const color=document.getElementById('cd-color')?.value||'#ffffff';
+  const size=document.getElementById('cd-fontsize')?.value||8;
+  const font=document.getElementById('cd-font')?.value||"'IBM Plex Mono',monospace";
+  el.style.left=left+'%';el.style.top=top+'%';
+  el.style.color=color;el.style.fontSize=size+'vw';el.style.fontFamily=font;
+  const days=parseInt(document.getElementById('cd-days')?.value)||0;
+  const hours=parseInt(document.getElementById('cd-hours')?.value)||0;
+  const mins=parseInt(document.getElementById('cd-minutes')?.value)||0;
+  const secs=parseInt(document.getElementById('cd-seconds')?.value)||0;
+  const total=days*86400+hours*3600+mins*60+secs;
+  el.textContent=formatCountdown(total,getShowOptions());
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const prev=document.getElementById('cd-preview');
+  if(prev){
+    prev.addEventListener('click',e=>{
+      if(e.target===document.getElementById('cd-preview-text'))return;
+      const rect=prev.getBoundingClientRect();
+      const x=((e.clientX-rect.left)/rect.width*100).toFixed(1);
+      const y=((e.clientY-rect.top)/rect.height*100).toFixed(1);
+      document.getElementById('cd-left').value=x;
+      document.getElementById('cd-top').value=y;
+      updateCdPreview();
+    });
+  }
+  ['cd-color','cd-fontsize','cd-days','cd-hours','cd-minutes','cd-seconds',
+   'show-days','show-hours','show-minutes','show-seconds','show-labels','cd-font','cd-bg'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.addEventListener('input',updateCdPreview);
+    if(el)el.addEventListener('change',updateCdPreview);
+  });
+  updateCdPreview();
+});
+
+function startCountdown(){
+  const days=parseInt(document.getElementById('cd-days').value)||0;
+  const hours=parseInt(document.getElementById('cd-hours').value)||0;
+  const mins=parseInt(document.getElementById('cd-minutes').value)||0;
+  const secs=parseInt(document.getElementById('cd-seconds').value)||0;
+  const total=days*86400+hours*3600+mins*60+secs;
+  if(total<=0){alert('Durée invalide !');return;}
+  const opts=getShowOptions();
+  const endTime=Date.now()+total*1000;
+  const cdData={
+    running:true,endTime,paused:false,
+    color:document.getElementById('cd-color').value,
+    size:document.getElementById('cd-fontsize').value,
+    bg:document.getElementById('cd-bg').value,
+    font:document.getElementById('cd-font').value,
+    left:parseFloat(document.getElementById('cd-left').value),
+    top:parseFloat(document.getElementById('cd-top').value),
+    target:cdTarget,
+    showDays:!!opts.days,showHours:!!opts.hours,
+    showMinutes:!!opts.minutes,showSeconds:!!opts.seconds,showLabels:!!opts.labels
+  };
+  db.ref('countdown').set(cdData);
+  if(cdInterval)clearInterval(cdInterval);
+  cdInterval=setInterval(()=>{
+    const remaining=Math.max(0,Math.round((endTime-Date.now())/1000));
+    const disp=formatCountdown(remaining,opts);
+    document.getElementById('cd-display').textContent=disp;
+    document.getElementById('cd-display').className='countdown-time running';
+    document.getElementById('cd-status-text').textContent='En cours — '+disp;
+    if(remaining<=0){clearInterval(cdInterval);document.getElementById('cd-display').className='countdown-time finished';document.getElementById('cd-status-text').textContent='Terminé !';db.ref('countdown/running').set(false);}
+  },500);
+}
+
+function pauseCountdown(){
+  if(cdInterval)clearInterval(cdInterval);
+  db.ref('countdown').once('value',s=>{
+    const data=s.val();if(!data)return;
+    const remaining=Math.max(0,Math.round((data.endTime-Date.now())/1000));
+    db.ref('countdown').update({running:false,paused:true,remainingSeconds:remaining});
+    document.getElementById('cd-display').className='countdown-time paused';
+    document.getElementById('cd-status-text').textContent='En pause';
+  });
+}
+
+function stopCountdown(){
+  if(cdInterval)clearInterval(cdInterval);
+  db.ref('countdown').set({running:false,paused:false,endTime:0});
+  document.getElementById('cd-display').textContent='--';
+  document.getElementById('cd-display').className='countdown-time';
+  document.getElementById('cd-status-text').textContent='Arrêté';
+}
+
+// LINKS
+function setLinksMode(mode){
+  linksMode=mode;
+  document.getElementById('links-tab-simple').style.cssText=mode==='simple'?'background:var(--accent);border-color:var(--accent);color:#fff;':'';
+  document.getElementById('links-tab-zones').style.cssText=mode==='zones'?'background:var(--accent);border-color:var(--accent);color:#fff;':'';
+  renderLinks();
+}
+function renderLinks(){
+  const el=document.getElementById('links-list');if(!el)return;
+  if(linksMode==='simple'){
+    const list=Object.entries(simpleSlots);
+    if(!list.length){el.innerHTML='<div class="empty-state">Aucun slot</div>';return;}
+    el.innerHTML=list.map(([id,s])=>{const url=`${OVERLAY_BASE_URL}?simple=${id}`;const asset=s.assetId?assets[s.assetId]:null;return`<div class="link-row"><div class="flex-between"><div><div style="font-size:14px;font-weight:600;">${s.label}</div><div style="font-size:12px;color:var(--text2);font-family:var(--mono);">${asset?asset.name:'Aucun'}</div></div><span class="badge ${asset?'badge-green':'badge-gray'}">${asset?'● Actif':'○ Vide'}</span></div><div class="url-display"><span style="flex:1;">${url}</span><button class="btn btn-sm" onclick="copyUrl('${url}',this)">Copier</button></div></div>`;}).join('');
+  }else{
+    const list=Object.entries(players);
+    if(!list.length){el.innerHTML='<div class="empty-state">Aucun joueur</div>';return;}
+    const perZones=Object.entries(zones).filter(([,z])=>z.scope==='perplayer');
+    el.innerHTML=list.map(([id,p])=>{const url=`${OVERLAY_BASE_URL}?player=${id}`;const assigned=perZones.filter(([zid])=>assignments[id]?.[zid]).length;return`<div class="link-row"><div class="flex-between"><div><div style="font-size:14px;font-weight:600;">${p.label}</div><div style="font-size:12px;color:var(--text2);font-family:var(--mono);">${assigned}/${perZones.length} zones</div></div><span class="badge ${assigned>0?'badge-green':'badge-gray'}">${assigned>0?'● Actif':'○ Vide'}</span></div><div class="url-display"><span style="flex:1;">${url}</span><button class="btn btn-sm" onclick="copyUrl('${url}',this)">Copier</button></div></div>`;}).join('');
+  }
+}
+function copyUrl(url,btn){navigator.clipboard.writeText(url).then(()=>{btn.textContent='Copié ✓';setTimeout(()=>btn.textContent='Copier',1500);});}
+
+// PLAYER MANAGE
+function addPlayer(){db.ref('players/p_'+Date.now()).set({label:'Joueur '+(Object.keys(players).length+1)});}
+function deletePlayer(id){if(!confirm('Supprimer ?'))return;db.ref('players/'+id).remove();db.ref('assignments/'+id).remove();}
+function renderPlayerManage(){
+  const el=document.getElementById('player-manage-list');if(!el)return;
+  const list=Object.entries(players);
+  if(!list.length){el.innerHTML='<div class="empty-state">Aucun joueur</div>';return;}
+  el.innerHTML=list.map(([id,p],i)=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);"><div style="width:28px;height:28px;background:var(--surface2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-family:var(--mono);color:var(--text3);">${i+1}</div><input type="text" value="${p.label}" style="flex:1;" onchange="db.ref('players/${id}/label').set(this.value)"/><button class="btn btn-sm btn-danger" onclick="deletePlayer('${id}')">Suppr.</button></div>`).join('');
+}
+</script>
+</body>
+</html>

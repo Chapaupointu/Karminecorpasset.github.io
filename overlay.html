@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>OBS Overlay</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
+  .zone{position:absolute;overflow:hidden;opacity:0;transition:opacity 0.4s ease;}
+  .zone.visible{opacity:1;}
+  .zone video,.zone img{width:100%;height:100%;display:block;}
+  #countdown-el{position:absolute;font-family:'Arial Black',sans-serif;font-weight:900;transform:translate(-50%,-50%);white-space:nowrap;opacity:0;transition:opacity 0.4s ease;text-shadow:2px 2px 8px rgba(0,0,0,0.8);z-index:999;}
+  #countdown-el.visible{opacity:1;}
+</style>
+</head>
+<body>
+
+<div id="countdown-el"></div>
+
+<script>
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyCmNaMBf8Ps-r5IoENr3aAkcFR8XBgAq9g",
+    authDomain: "karmine-corp-asset.firebaseapp.com",
+    databaseURL: "https://karmine-corp-asset-default-rtdb.firebaseio.com",
+    projectId: "karmine-corp-asset",
+    storageBucket: "karmine-corp-asset.firebasestorage.app",
+    messagingSenderId: "588622975676",
+    appId: "1:588622975676:web:04f1e1c66553fb201536b9"
+  };
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+<script>
+const params=new URLSearchParams(window.location.search);
+const simpleId=params.get('simple');
+const playerId=params.get('player');
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const db=firebase.database();
+
+let assets={},zones={},assignments={},renderedZones={},zoneTimers={};
+let cdInterval=null;
+
+// Track loading state
+let assetsLoaded=false, zonesLoaded=false, assignmentsLoaded=false, slotLoaded=false;
+
+function checkAndRender(){
+  if(simpleId && assetsLoaded && slotLoaded) {
+    const assetId=simpleSlotData?.assetId||null;
+    if(simpleTimerInterval){clearTimeout(simpleTimerInterval);simpleTimerInterval=null;}
+    currentSimpleAssetId=assetId;
+    const asset=assetId?assets[assetId]:null;
+    if(simpleSlotData?.timerEnabled&&asset){startSimpleTimer(asset,simpleSlotData);}
+    else{renderSimple(asset);}
+  }
+  if(playerId && assetsLoaded && zonesLoaded && assignmentsLoaded) {
+    rebuildZones();
+  }
+}
+
+db.ref('assets').on('value',s=>{assets=s.val()||{};assetsLoaded=true;checkAndRender();});
+
+// ====== COUNTDOWN ======
+const cdEl=document.getElementById('countdown-el');
+
+function formatCountdown(totalSeconds, data){
+  const d=Math.floor(totalSeconds/86400);
+  const h=Math.floor((totalSeconds%86400)/3600);
+  const m=Math.floor((totalSeconds%3600)/60);
+  const s=totalSeconds%60;
+  let parts=[];
+  if(data.showDays)    parts.push(String(d).padStart(2,'0')+(data.showLabels?'j':''));
+  if(data.showHours)   parts.push(String(h).padStart(2,'0')+(data.showLabels?'h':''));
+  if(data.showMinutes) parts.push(String(m).padStart(2,'0')+(data.showLabels?'m':''));
+  if(data.showSeconds) parts.push(String(s).padStart(2,'0')+(data.showLabels?'s':''));
+  if(!parts.length)    parts.push('00');
+  return data.showLabels ? parts.join(' ') : parts.join(':');
+}
+
+db.ref('countdown').on('value',snap=>{
+  const data=snap.val();
+  if(cdInterval){clearInterval(cdInterval);cdInterval=null;}
+  if(!data||!data.running){cdEl.classList.remove('visible');return;}
+  const target=data.target||'all';
+  const myId=simpleId||playerId||'';
+  if(target!=='all'&&target!==myId){cdEl.classList.remove('visible');return;}
+  cdEl.style.left=data.left+'%';
+  cdEl.style.top=data.top+'%';
+  cdEl.style.color=data.color||'#ffffff';
+  cdEl.style.fontSize=(data.size||8)+'vw';
+  cdEl.style.fontFamily=data.font||"'Arial Black',sans-serif";
+  if(data.bg&&data.bg!=='transparent'){
+    cdEl.style.background=data.bg;
+    cdEl.style.padding='0.1em 0.3em';
+    cdEl.style.borderRadius='8px';
+  } else {
+    cdEl.style.background='transparent';
+    cdEl.style.padding='0';
+  }
+  function tick(){
+    const remaining=Math.max(0,Math.round((data.endTime-Date.now())/1000));
+    cdEl.textContent=formatCountdown(remaining,data);
+    cdEl.classList.add('visible');
+    if(remaining<=0){clearInterval(cdInterval);cdInterval=null;setTimeout(()=>cdEl.classList.remove('visible'),3000);}
+  }
+  tick();
+  cdInterval=setInterval(tick,500);
+});
+
+// ====== MODE SIMPLE ======
+let simpleEl=null,currentSimpleAssetId=null,simpleTimerInterval=null,simpleSlotData=null;
+
+if(simpleId){
+  db.ref('simpleSlots/'+simpleId).on('value',snap=>{
+    simpleSlotData=snap.val();
+    slotLoaded=true;
+    checkAndRender();
+  });
+}
+
+function startSimpleTimer(asset,slot){
+  const showMs=(slot.showDuration||30)*1000;
+  const hideMs=(slot.hideDuration||15)*60*1000;
+  function show(){
+    renderSimple(asset);
+    simpleTimerInterval=setTimeout(()=>{
+      hideSimple();
+      simpleTimerInterval=setTimeout(()=>show(),hideMs);
+    },showMs);
+  }
+  show();
+}
+
+function hideSimple(){
+  if(simpleEl){simpleEl.classList.remove('visible');setTimeout(()=>{if(simpleEl){simpleEl.remove();simpleEl=null;}},400);}
+}
+
+function renderSimple(asset){
+  hideSimple();
+  if(!asset)return;
+  setTimeout(()=>{
+    const el=document.createElement('div');
+    el.className='zone';
+    el.style.cssText='left:0;top:0;width:100%;height:100%;';
+    let media;
+    if(asset.type==='video'){media=document.createElement('video');media.src=asset.url;media.loop=true;media.muted=!asset.sound;media.autoplay=true;media.playsInline=true;media.style.objectFit='contain';media.onloadeddata=()=>media.play().catch(()=>{});}
+    else{media=document.createElement('img');media.src=asset.url;media.style.objectFit='contain';}
+    el.appendChild(media);document.body.appendChild(el);simpleEl=el;
+    setTimeout(()=>el.classList.add('visible'),50);
+  },400);
+}
+
+// ====== MODE ZONES ======
+if(playerId){
+  let commonLoaded=false, playerLoaded=false;
+  db.ref('zones').on('value',s=>{zones=s.val()||{};zonesLoaded=true;checkAndRender();});
+  db.ref('assignments/common').on('value',s=>{assignments['common']=s.val()||{};commonLoaded=true;if(commonLoaded&&playerLoaded){assignmentsLoaded=true;}checkAndRender();});
+  db.ref('assignments/'+playerId).on('value',s=>{assignments[playerId]=s.val()||{};playerLoaded=true;if(commonLoaded&&playerLoaded){assignmentsLoaded=true;}checkAndRender();});
+}
+
+function rebuildZones(){
+  if(!Object.keys(zones).length)return;
+  Object.entries(zones).forEach(([zoneId,zone])=>{
+    const assetId=zone.scope==='common'?assignments['common']?.[zoneId]||null:assignments[playerId]?.[zoneId]||null;
+    if(renderedZones[zoneId]===assetId)return;
+    renderedZones[zoneId]=assetId;
+    // Annule l'éventuel timer précédent pour cette zone
+    if(zoneTimers[zoneId]){clearTimeout(zoneTimers[zoneId]);delete zoneTimers[zoneId];}
+    let el=document.getElementById('z_'+zoneId);
+    if(!el){el=document.createElement('div');el.id='z_'+zoneId;el.className='zone';document.body.appendChild(el);}
+    el.style.left=zone.left+'%';el.style.top=zone.top+'%';el.style.width=zone.width+'%';el.style.height=zone.height+'%';
+    const asset=assetId?assets[assetId]:null;
+    if(!asset){el.classList.remove('visible');setTimeout(()=>{el.innerHTML='';},400);return;}
+
+    function showZoneAsset(){
+      el.classList.remove('visible');
+      setTimeout(()=>{
+        el.innerHTML='';
+        let media;
+        if(asset.type==='video'){media=document.createElement('video');media.src=asset.url;media.loop=true;media.muted=!asset.sound;media.autoplay=true;media.playsInline=true;media.style.objectFit=zone.fit||'contain';media.onloadeddata=()=>media.play().catch(()=>{});}
+        else{media=document.createElement('img');media.src=asset.url;media.style.objectFit=zone.fit||'contain';}
+        el.appendChild(media);
+        // Text overlay
+        if(zone.textEnabled&&zone.text){
+          const textEl=document.createElement('div');
+          textEl.style.cssText='position:absolute;left:'+zone.textX+'%;top:'+zone.textY+'%;transform:translate(-50%,-50%);color:'+(zone.textColor||'#fff')+';font-size:'+(zone.textSize||3)+'vw;font-family:'+(zone.textFont||'Arial Black,sans-serif')+';font-weight:700;text-shadow:2px 2px 6px rgba(0,0,0,.8);white-space:nowrap;z-index:10;pointer-events:none;';
+          if(zone.counterEnabled){
+            const counterKey='counters/'+zoneId+(playerId?'_'+playerId:'');
+            db.ref(counterKey).on('value',function(snap){
+              const val=snap.val()!==null?snap.val():(zone.counterStart||0);
+              textEl.textContent=(zone.text||'')+val;
+            });
+          } else {
+            textEl.textContent=zone.text||'';
+          }
+          el.appendChild(textEl);
+        }
+        setTimeout(()=>el.classList.add('visible'),50);
+        if(zone.timerEnabled){
+          const showMs=(zone.showDuration||30)*1000;
+          const hideMs=(zone.hideDuration||15)*60*1000;
+          zoneTimers[zoneId]=setTimeout(()=>{
+            el.classList.remove('visible');
+            zoneTimers[zoneId]=setTimeout(()=>showZoneAsset(),hideMs);
+          },showMs);
+        }
+      },300);
+    }
+    showZoneAsset();
+  });
+  Object.keys(renderedZones).forEach(zoneId=>{if(!zones[zoneId]){const el=document.getElementById('z_'+zoneId);if(el)el.remove();delete renderedZones[zoneId];}});
+}
+
+function rebuild(){
+  checkAndRender();
+}
+
+// Auto-refresh si rien n'est affiché après 5 secondes
+setTimeout(function(){
+  let somethingVisible = false;
+  document.querySelectorAll('.zone.visible').forEach(function(el){
+    somethingVisible = true;
+  });
+  if(!somethingVisible){
+    console.log('Rien affiché — rechargement...');
+    location.reload();
+  }
+}, 5000);
+
+// Vérification toutes les 30 secondes
+setInterval(function(){
+  let somethingVisible = false;
+  document.querySelectorAll('.zone.visible').forEach(function(el){
+    somethingVisible = true;
+  });
+  // Si des assets devraient être affichés mais ne le sont pas
+  const shouldHaveContent = (simpleId && simpleSlotData?.assetId) || 
+    (playerId && Object.values(assignments[playerId]||{}).some(v=>v));
+  if(shouldHaveContent && !somethingVisible){
+    console.log('Assets manquants — rechargement...');
+    location.reload();
+  }
+}, 30000);
+</script>
+</body>
+</html>
