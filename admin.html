@@ -614,7 +614,7 @@
             <div class="preview-wrap" id="ps-preview" style="cursor:default;margin-bottom:8px;overflow:hidden;">
               <div class="preview-label" id="ps-preview-label">Aperçu 1920×1080</div>
               <!-- Twitch stream en arrière-plan -->
-              <div id="ps-twitch-embed" style="position:absolute;inset:0;display:none;pointer-events:none;"></div>
+              <div id="ps-twitch-embed" style="position:absolute;inset:0;display:none;"></div>
               <!-- Les zones du joueur apparaissent ici -->
               <div id="ps-preview-zones"></div>
               <!-- Le one-shot apparaît par dessus -->
@@ -1062,7 +1062,7 @@ function updatePlayerOneshotPreview(){
   oneshotDiv.style.display='flex';
 
   const borderCss=assetId?'border:2px dashed #f59e0b;':'border:2px dashed rgba(245,158,11,0.35);';
-  oneshotDiv.style.cssText='position:absolute;left:'+posLeft+'%;top:'+posTop+'%;width:'+posWidth+'%;height:'+posHeight+'%;'+borderCss+'border-radius:4px;display:flex;align-items:center;justify-content:center;overflow:visible;opacity:'+opacity+';cursor:move;';
+  oneshotDiv.style.cssText='position:absolute;left:'+posLeft+'%;top:'+posTop+'%;width:'+posWidth+'%;height:'+posHeight+'%;'+borderCss+'border-radius:4px;display:flex;align-items:center;justify-content:center;overflow:visible;opacity:'+opacity+';cursor:move;z-index:100;'
 
   const preview=document.getElementById('ps-preview');
 
