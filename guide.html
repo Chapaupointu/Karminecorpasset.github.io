@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OBS Overlay — Setup</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0f; --surface:#111118; --surface2:#1a1a24;
+    --border:#2a2a3a; --border2:#3a3a50;
+    --accent:#7c6af7; --accent2:#a599ff; --amber:#f59e0b; --green:#22c55e;
+    --text:#e8e8f0; --text2:#9090a8; --text3:#5a5a70;
+    --mono:'IBM Plex Mono',monospace; --sans:'Syne',sans-serif;
+    --ko:'Noto Sans KR','Syne',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);
+    padding:clamp(20px,4vw,52px) clamp(16px,4vw,56px);min-height:100vh}
+  .wrap{max-width:1500px;margin:0 auto}
+  .ko{font-family:var(--ko)}
+
+  /* HEADER */
+  .head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:12px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 14px var(--accent);flex-shrink:0;animation:pulse 2.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  .brand-txt{font-size:clamp(11px,1.5vw,14px);font-weight:700;letter-spacing:.16em;color:var(--text2)}
+  .once{text-align:right;font-size:12px;line-height:1.8;color:var(--text3)}
+  .once b{display:block;color:var(--green);font-weight:700;font-size:10.5px;letter-spacing:.13em;margin-bottom:4px}
+  h1{font-size:clamp(28px,5.2vw,46px);font-weight:800;letter-spacing:-.022em;line-height:1.08;margin-top:20px}
+  .sub{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;margin-top:10px;
+    font-size:clamp(14px,2vw,17px);color:var(--text2);font-weight:500}
+  .sub span:not(:last-child)::after{content:'·';margin-left:14px;color:var(--border2)}
+
+  /* LINK */
+  .link{margin:clamp(22px,3.5vw,30px) 0 clamp(24px,3.5vw,32px);
+    background:var(--surface);border:1px solid var(--border2);border-left:3px solid var(--amber);
+    border-radius:0 11px 11px 0;padding:18px clamp(16px,2.5vw,24px);
+    display:flex;align-items:center;gap:clamp(14px,2.5vw,26px);flex-wrap:wrap}
+  .link-lab{flex-shrink:0;font-size:11px;line-height:1.75;color:var(--text3);letter-spacing:.05em}
+  .link-lab b{display:block;color:var(--amber);font-weight:700;letter-spacing:.11em;font-size:10.5px}
+  .link-main{flex:1;min-width:240px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .link-url{flex:1;min-width:240px;font-family:var(--mono);font-size:clamp(12px,1.6vw,17px);
+    color:var(--accent2);word-break:break-all;line-height:1.5;user-select:all}
+  .link-url i{color:var(--amber);font-style:normal;font-weight:700}
+  .copy{flex-shrink:0;padding:10px 18px;border-radius:8px;border:1px solid var(--border2);
+    background:var(--surface2);color:var(--text);font-family:var(--sans);font-size:13px;
+    font-weight:700;cursor:pointer;transition:all .15s}
+  .copy:hover{background:var(--border);border-color:var(--accent)}
+  .copy.done{background:var(--green);border-color:var(--green);color:#000}
+  .nolink{font-family:var(--mono);font-size:12px;color:var(--text3);line-height:1.7;margin-top:8px;flex-basis:100%}
+
+  /* COLUMNS */
+  .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media(max-width:1000px){.cols{grid-template-columns:1fr}}
+  .col{background:var(--surface);border:1px solid var(--border);border-radius:13px;
+    padding:20px clamp(16px,2.2vw,22px) 24px}
+  .col-h{font-size:11.5px;font-weight:700;letter-spacing:.15em;color:var(--accent);
+    padding-bottom:12px;margin-bottom:4px;border-bottom:1px solid var(--border)}
+  .step{display:flex;gap:12px;padding:14px 0 0}
+  .n{flex-shrink:0;width:25px;height:25px;border-radius:50%;background:var(--surface2);
+    border:1px solid var(--border2);font-family:var(--mono);font-size:12px;font-weight:700;
+    color:var(--accent2);display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .t{font-size:14.5px;line-height:1.62;color:#c8c8d8}
+  .col.k .t{font-size:14px;line-height:1.72}
+  .t k{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--text);
+    background:var(--surface2);border:1px solid var(--border2);border-radius:4px;
+    padding:1px 6px;white-space:nowrap}
+  .t k.w{white-space:normal;font-size:12.5px;display:block;line-height:1.5;
+    padding:8px 10px;margin-top:8px;text-align:center}
+  .t v{font-family:var(--mono);font-weight:700;color:var(--amber);font-size:15px}
+
+  /* FOOT */
+  .foot{margin-top:24px;background:var(--surface);border:1px solid var(--border);
+    border-radius:11px;padding:17px clamp(16px,2.5vw,22px);
+    display:grid;grid-template-columns:auto repeat(3,1fr);gap:18px;align-items:start}
+  @media(max-width:1000px){.foot{grid-template-columns:auto 1fr}}
+  .foot-i{font-size:18px;color:var(--amber);line-height:1.3;padding-top:1px}
+  @media(max-width:1000px){.foot-i{grid-row:span 3}}
+  .foot p{font-size:12.5px;line-height:1.6;color:var(--text2)}
+  .foot p b.lb{display:block;color:var(--text3);font-size:10px;letter-spacing:.13em;
+    font-weight:700;margin-bottom:4px}
+  .foot p em{font-style:normal;color:#c8c8d8;font-weight:700}
+
+  .end{text-align:center;margin-top:28px;font-family:var(--mono);font-size:11px;color:var(--text3)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div>
+      <div class="brand"><div class="dot"></div><div class="brand-txt">KARMINE CORP — STREAM OVERLAY</div></div>
+      <h1 id="title">Add the overlay to OBS</h1>
+      <div class="sub">
+        <span>Ajouter l'overlay à OBS</span>
+        <span class="ko">OBS에 오버레이 추가하기</span>
+      </div>
+    </div>
+    <div class="once">
+      <b>ONE-TIME SETUP</b>
+      À faire une seule fois<br>
+      <span class="ko">한 번만 설정하면 됩니다</span>
+    </div>
+  </div>
+
+  <div class="link">
+    <div class="link-lab">
+      <b>YOUR LINK</b>
+      Ton lien personnel<br>
+      <span class="ko">개인 링크</span>
+    </div>
+    <div class="link-main">
+      <div class="link-url" id="url"></div>
+      <button class="copy" id="copybtn" onclick="copyLink()">Copier</button>
+    </div>
+    <div class="nolink" id="nolink" style="display:none">
+      Ton lien personnel t'a été envoyé à part — colle-le dans OBS à l'étape 3.<br>
+      Your personal link was sent to you separately — paste it in OBS at step 3.<br>
+      <span class="ko">개인 링크는 별도로 전달되었습니다 — 3단계에서 붙여넣으세요.</span>
+    </div>
+  </div>
+
+  <div class="cols">
+
+    <div class="col">
+      <div class="col-h">ENGLISH</div>
+      <div class="step"><div class="n">1</div><div class="t">In OBS, click <k>+</k> under <k>Sources</k> and choose <k>Browser</k></div></div>
+      <div class="step"><div class="n">2</div><div class="t">Name it <k>KC Overlay</k> and press <k>OK</k></div></div>
+      <div class="step"><div class="n">3</div><div class="t">Paste your personal link into the <k>URL</k> field</div></div>
+      <div class="step"><div class="n">4</div><div class="t">Set Width to <v>1920</v> and Height to <v>1080</v></div></div>
+      <div class="step"><div class="n">5</div><div class="t">Tick this box, then press <k>OK</k><k class="w">Refresh browser when scene becomes active</k></div></div>
+    </div>
+
+    <div class="col">
+      <div class="col-h">FRANÇAIS</div>
+      <div class="step"><div class="n">1</div><div class="t">Dans OBS, clique sur <k>+</k> sous <k>Sources</k> et choisis <k>Navigateur</k></div></div>
+      <div class="step"><div class="n">2</div><div class="t">Nomme-la <k>KC Overlay</k> et valide avec <k>OK</k></div></div>
+      <div class="step"><div class="n">3</div><div class="t">Colle ton lien personnel dans le champ <k>URL</k></div></div>
+      <div class="step"><div class="n">4</div><div class="t">Règle Largeur sur <v>1920</v> et Hauteur sur <v>1080</v></div></div>
+      <div class="step"><div class="n">5</div><div class="t">Coche cette case, puis <k>OK</k><k class="w">Actualiser le navigateur quand la scène devient active</k></div></div>
+    </div>
+
+    <div class="col k ko">
+      <div class="col-h">한국어</div>
+      <div class="step"><div class="n">1</div><div class="t">OBS에서 <k>소스</k> 아래의 <k>+</k> 를 클릭하고 <k>브라우저</k>를 선택하세요</div></div>
+      <div class="step"><div class="n">2</div><div class="t">이름을 <k>KC Overlay</k> 로 지정하고 <k>확인</k>을 누르세요</div></div>
+      <div class="step"><div class="n">3</div><div class="t">개인 링크를 <k>URL</k> 칸에 붙여넣으세요</div></div>
+      <div class="step"><div class="n">4</div><div class="t">너비를 <v>1920</v>, 높이를 <v>1080</v> 으로 설정하세요</div></div>
+      <div class="step"><div class="n">5</div><div class="t">이 항목을 체크한 뒤 <k>확인</k><k class="w">장면이 활성화될 때 브라우저 새로고침</k></div></div>
+    </div>
+
+  </div>
+
+  <div class="foot">
+    <div class="foot-i">▲</div>
+    <p><b class="lb">IMPORTANT</b>Place this source <em>above</em> your game capture in the list, so the overlay shows on top.</p>
+    <p><b class="lb">IMPORTANT</b>Place cette source <em>au-dessus</em> de ta capture de jeu dans la liste, pour qu'elle s'affiche par-dessus.</p>
+    <p class="ko"><b class="lb">중요</b>오버레이가 위에 보이도록 이 소스를 게임 캡처보다 <em>위에</em> 배치하세요.</p>
+  </div>
+
+  <div class="end" id="end"></div>
+
+</div>
+
+<script>
+const BASE = 'https://chapaupointu.github.io/Karminecorpasset.github.io/overlay.html';
+const params = new URLSearchParams(location.search);
+const player = params.get('player');
+const slot   = params.get('simple');
+const name   = params.get('name');
+
+let fullUrl = '';
+if(player)      fullUrl = BASE + '?player=' + player;
+else if(slot)   fullUrl = BASE + '?simple=' + slot;
+
+const urlEl = document.getElementById('url');
+const btn   = document.getElementById('copybtn');
+
+if(fullUrl){
+  urlEl.textContent = fullUrl;
+  if(name){
+    document.getElementById('title').textContent = 'Add the overlay to OBS';
+    document.getElementById('end').textContent = 'Lien préparé pour ' + name;
+  }
+}else{
+  urlEl.innerHTML = BASE + '?player=<i>XX</i>';
+  btn.style.display = 'none';
+  document.getElementById('nolink').style.display = 'block';
+}
+
+function copyLink(){
+  navigator.clipboard.writeText(fullUrl).then(function(){
+    btn.textContent = 'Copié ✓';
+    btn.classList.add('done');
+    setTimeout(function(){ btn.textContent = 'Copier'; btn.classList.remove('done'); }, 1800);
+  });
+}
+</script>
+</body>
+</html>
